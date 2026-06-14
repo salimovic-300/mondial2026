@@ -1,57 +1,36 @@
 /**
  * Vercel Serverless Function — /api/scores
- * Proxies API-Football to keep the API key server-side (never exposed in the browser).
- *
- * Setup:
- *   1. Get a free key at https://dashboard.api-football.com
- *   2. In Vercel dashboard → Settings → Environment Variables:
- *      API_FOOTBALL_KEY = your_key_here
- *   3. Hit /api/scores?league=1&season=2026&round=1
- *
- * Response is cached 60 seconds via Vercel edge cache headers.
+ * Source: TheSportsDB (gratuit, sans clé API)
+ * Coupe du Monde 2026 — ID league = 4429
  */
-
-const LEAGUE_ID = 1;   // FIFA World Cup on API-Football
-const SEASON    = 2026;
 
 export const config = { runtime: "edge" };
 
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
-  const round = searchParams.get("round") ?? "";
-
-  const apiKey = process.env.API_FOOTBALL_KEY;
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: "API_FOOTBALL_KEY not configured", mock: true, fixtures: [] }),
-      { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "public, s-maxage=60" } }
-    );
-  }
-
-  const params = new URLSearchParams({ league: LEAGUE_ID, season: SEASON, timezone: "America/New_York" });
-  if (round) params.set("round", `Group Stage - ${round}`);
+  const round = parseInt(searchParams.get("round") ?? "1");
 
   try {
-    const res = await fetch(`https://v3.football.api-sports.io/fixtures?${params}`, {
-      headers: { "x-apisports-key": apiKey },
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      `https://www.thesportsdb.com/api/v1/json/3/eventsround.php?id=4429&r=${round}&s=2026`,
+      { signal: AbortSignal.timeout(8000) }
+    );
 
-    if (!res.ok) throw new Error(`API-Football error: ${res.status}`);
+    if (!res.ok) throw new Error(`TheSportsDB error: ${res.status}`);
     const data = await res.json();
 
-    // Normalise response for the frontend
-    const fixtures = (data.response ?? []).map((f) => ({
-      id:       f.fixture.id,
-      date:     f.fixture.date,
-      status:   f.fixture.status.short,   // NS, 1H, HT, 2H, FT, AET, PEN
-      elapsed:  f.fixture.status.elapsed,
-      home:     { name: f.teams.home.name, code: isoCode(f.teams.home.name), score: f.goals.home },
-      away:     { name: f.teams.away.name, code: isoCode(f.teams.away.name), score: f.goals.away },
-      group:    f.league.round?.replace("Group Stage - ", "") ?? "",
+    const events = data.events ?? [];
+
+    const fixtures = events.map((e) => ({
+      id:      e.idEvent,
+      date:    e.dateEvent + "T" + (e.strTime ?? "00:00:00") + "Z",
+      status:  e.strStatus === "Match Finished" ? "FT" : e.strStatus === "In Progress" ? "1H" : "NS",
+      home:    { name: e.strHomeTeam, code: isoCode(e.strHomeTeam), score: e.intHomeScore },
+      away:    { name: e.strAwayTeam, code: isoCode(e.strAwayTeam), score: e.intAwayScore },
+      group:   e.strGroup ?? "",
     }));
 
-    return new Response(JSON.stringify({ fixtures }), {
+    return new Response(JSON.stringify({ fixtures, source: "thesportsdb" }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -67,10 +46,6 @@ export default async function handler(req) {
   }
 }
 
-/**
- * Maps full team names from API-Football to ISO 3166-1 alpha-2 codes.
- * Extend as needed for all 48 teams.
- */
 function isoCode(name) {
   const MAP = {
     "Mexico":"MX","South Africa":"ZA","Korea Republic":"KR","Czech Republic":"CZ",
