@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 /* =========================================================================
    MONDIAL 2026 PRO — Plateforme tournoi  ·  USA · CANADA · MEXIQUE
@@ -183,7 +183,11 @@ const DICT = {
     resetSim:"Réinitialiser la simulation", proT:"PASSER À PRO", proTxt:"Débloque les fonctions premium pour une expérience complète.",
     proF:["Scores & classements en direct (API)","Alertes & notifications de match","Mode hors-ligne + sans publicité","Ligues privées de pronostics"],
     role_open:"Ouverture · 11 juin", role_final:"FINALE · 19 juillet", role_semi:"Demi-finale", role_qf:"Quart de finale", role_r16:"Huitième de finale", role_group:"Phase de groupes", role_third:"Match 3e place",
-    f2022:"Finale 2022", mar:"Arbitre marocain", ofc:"Unique arbitre OFC", host:"🏟️ Pays hôte", betNote:"Outil de pronostic ludique. Les jeux d'argent comportent des risques. 18+." },
+    f2022:"Finale 2022", mar:"Arbitre marocain", ofc:"Unique arbitre OFC", host:"🏟️ Pays hôte", betNote:"Outil de pronostic ludique. Les jeux d'argent comportent des risques. 18+.",
+    nav_r:"Direct", res_title:"Résultats & Direct", res_live:"En cours", res_finished:"Terminé", res_upcoming:"À venir",
+    res_empty:"Aucun match pour cette journée.", res_day:"Journée",
+    cd_title:"COMPTE À REBOURS · FINALE", cd_days:"j", cd_hours:"h", cd_min:"min", cd_sec:"s",
+    cd_done:"La finale a lieu maintenant !", install:"Installer l'app", install_sub:"Accès rapide depuis l'écran d'accueil" },
   en: { app:"World Cup 2026", ed:"FIFA WORLD CUP · 23rd EDITION", live:"LIVE", hosts:"USA · Canada · Mexico", dates:"Jun 11 → Jul 19",
     teams:"TEAMS", groups:"GROUPS", stadiums:"STADIUMS", matches:"MATCHES", opening:"OPENING MATCH", final:"★ FINAL",
     favorites:"FAVOURITES · OUTRIGHT WINNER", winnerFinal:"Outright winner", focus:"MOROCCO FOCUS · GROUP C",
@@ -207,7 +211,11 @@ const DICT = {
     resetSim:"Reset simulation", proT:"GO PRO", proTxt:"Unlock premium features for the full experience.",
     proF:["Live scores & standings (API)","Match alerts & notifications","Offline mode + ad-free","Private prediction leagues"],
     role_open:"Opening · Jun 11", role_final:"FINAL · Jul 19", role_semi:"Semi-final", role_qf:"Quarter-final", role_r16:"Round of 16", role_group:"Group stage", role_third:"3rd-place match",
-    f2022:"2022 Final", mar:"Moroccan referee", ofc:"Sole OFC referee", host:"🏟️ Host", betNote:"Fun prediction tool. Gambling carries risks. 18+." },
+    f2022:"2022 Final", mar:"Moroccan referee", ofc:"Sole OFC referee", host:"🏟️ Host", betNote:"Fun prediction tool. Gambling carries risks. 18+.",
+    nav_r:"Live", res_title:"Results & Live", res_live:"Live", res_finished:"FT", res_upcoming:"Upcoming",
+    res_empty:"No matches for this matchday.", res_day:"Matchday",
+    cd_title:"COUNTDOWN · FINAL", cd_days:"d", cd_hours:"h", cd_min:"m", cd_sec:"s",
+    cd_done:"The final is happening now!", install:"Install App", install_sub:"Quick access from home screen" },
   ar: { app:"مونديال 2026", ed:"كأس العالم FIFA · النسخة 23", live:"مباشر", hosts:"أمريكا · كندا · المكسيك", dates:"11 يونيو ← 19 يوليوز",
     teams:"منتخب", groups:"مجموعات", stadiums:"ملاعب", matches:"مباريات", opening:"مباراة الافتتاح", final:"★ النهائي",
     favorites:"المرشحون · الفائز باللقب", winnerFinal:"الفائز باللقب", focus:"تركيز المغرب · المجموعة C",
@@ -231,7 +239,11 @@ const DICT = {
     resetSim:"إعادة ضبط المحاكاة", proT:"الترقية إلى PRO", proTxt:"افتح الميزات المتقدمة للتجربة الكاملة.",
     proF:["النتائج والترتيب المباشر (API)","تنبيهات وإشعارات المباريات","وضع دون اتصال + بدون إعلانات","دوريات توقعات خاصة"],
     role_open:"الافتتاح · 11 يونيو", role_final:"النهائي · 19 يوليوز", role_semi:"نصف النهائي", role_qf:"ربع النهائي", role_r16:"ثمن النهائي", role_group:"دور المجموعات", role_third:"مباراة المركز الثالث",
-    f2022:"نهائي 2022", mar:"حكم مغربي", ofc:"الحكم الوحيد لـ OFC", host:"🏟️ بلد مضيف", betNote:"أداة توقعات ترفيهية. القمار ينطوي على مخاطر. +18." },
+    f2022:"نهائي 2022", mar:"حكم مغربي", ofc:"الحكم الوحيد لـ OFC", host:"🏟️ بلد مضيف", betNote:"أداة توقعات ترفيهية. القمار ينطوي على مخاطر. +18.",
+    nav_r:"مباشر", res_title:"النتائج والمباشر", res_live:"مباشر", res_finished:"انتهت", res_upcoming:"قادم",
+    res_empty:"لا توجد مباريات لهذه الجولة.", res_day:"الجولة",
+    cd_title:"العد التنازلي · النهائي", cd_days:"ي", cd_hours:"س", cd_min:"د", cd_sec:"ث",
+    cd_done:"النهائي يجري الآن!", install:"تثبيت التطبيق", install_sub:"وصول سريع من الشاشة الرئيسية" },
 };
 
 /* =========================================================================
@@ -356,10 +368,132 @@ select.wc-sel{width:100%;background:var(--bg2);color:var(--ink);border:1px solid
 .wc-nb{background:none;border:none;color:var(--mut);font-size:9.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer}
 .wc-nb svg{width:21px;height:21px}.wc-nb.on{color:var(--mag)}
 .wc-note{font-size:10.5px;color:var(--mut);text-align:center;padding:6px 22px 0;line-height:1.55}
+.wc-cd{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.wc-cd-unit{background:linear-gradient(180deg,rgba(255,194,71,.12),rgba(255,46,126,.08));border:1px solid rgba(255,194,71,.25);border-radius:14px;padding:12px 4px;text-align:center}
+.wc-cd-unit b{display:block;font-family:'Oswald';font-size:28px;font-weight:700;color:var(--gold);line-height:1}
+.wc-cd-unit span{font-size:9px;letter-spacing:1px;color:var(--mut)}
+.wc-res-match{display:flex;align-items:center;gap:6px;padding:10px 4px;border-top:1px solid var(--line)}
+.wc-res-match .side{flex:1;display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500}
+.wc-res-match .side.r{justify-content:flex-end;text-align:end}
+.wc-res-score{min-width:52px;text-align:center;font-family:'Oswald';font-weight:700;font-size:17px;color:var(--ink)}
+.wc-res-status{font-size:9px;font-weight:700;letter-spacing:.8px;padding:2px 7px;border-radius:6px;margin-bottom:2px;display:inline-block}
+.status-live{background:rgba(255,46,126,.2);color:var(--mag);animation:wcpulse 1.6s infinite}
+.status-ft{background:rgba(139,147,200,.15);color:var(--mut)}
+.status-ns{background:rgba(43,226,201,.1);color:var(--teal)}
+.wc-install{display:flex;align-items:center;gap:12px;background:linear-gradient(120deg,rgba(43,226,201,.1),rgba(123,92,255,.08));border:1px solid rgba(43,226,201,.2);border-radius:14px;padding:13px 15px;margin-bottom:14px;cursor:pointer}
+.wc-install .ic{font-size:24px}
+.wc-install .tx{flex:1}.wc-install .tx b{display:block;font-size:13px;font-weight:700}
+.wc-install .tx span{font-size:11px;color:var(--mut)}
+.wc-install .arr{color:var(--teal);font-size:18px}
 `;
 
+
 const Ico = ({ d }) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>);
-const ICONS = { home:"M3 11l9-8 9 8M5 10v10h14V10", groups:"M4 5h16M4 12h16M4 19h16", bracket:"M6 4v6h6M6 14v6h6M12 7h6M12 17h6", bet:"M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6", more:"M5 12h.01M12 12h.01M19 12h.01" };
+const ICONS = { home:"M3 11l9-8 9 8M5 10v10h14V10", groups:"M4 5h16M4 12h16M4 19h16", bracket:"M6 4v6h6M6 14v6h6M12 7h6M12 17h6", bet:"M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6", results:"M12 2a10 10 0 1 0 10 10M12 6v6l4 2", more:"M5 12h.01M12 12h.01M19 12h.01" };
+
+/* ---------- Countdown composant ---------- */
+function Countdown({ t }) {
+  const FINAL = new Date("2026-07-19T20:00:00-04:00").getTime();
+  const [tick, setTick] = useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setTick(Date.now()), 1000); return () => clearInterval(id); }, []);
+  const diff = FINAL - tick;
+  if (diff <= 0) return <div className="wc-card" style={{ textAlign:"center", padding:18 }}><div className="wc-disp" style={{ fontSize:16, color:"var(--gold)" }}>{t("cd_done")} 🏆</div></div>;
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  return (
+    <div>
+      <h2 className="wc-h2 wc-disp">{t("cd_title")}</h2>
+      <div className="wc-cd">
+        {[[days, t("cd_days")],[hours, t("cd_hours")],[mins, t("cd_min")],[secs, t("cd_sec")]].map(([v,l]) => (
+          <div className="wc-cd-unit" key={l}><b className="wc-disp">{String(v).padStart(2,"0")}</b><span>{l}</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Résultats live composant ---------- */
+function Results({ t, lang, gs, setGs, simGroup }) {
+  const [day, setDay] = useState(0);
+  const [liveData, setLiveData] = useState(null);
+  const [liveErr, setLiveErr] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/scores?round=${day + 1}`);
+        if (!res.ok) throw new Error("non-ok");
+        const json = await res.json();
+        if (json.fixtures && json.fixtures.length > 0 && !cancelled) setLiveData(json.fixtures);
+        else if (!cancelled) setLiveErr(true);
+      } catch { if (!cancelled) setLiveErr(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [day]);
+  // Génère tous les matchs simulés ou saisis par journée (MD 0,1,2)
+  const matchesByDay = useMemo(() => {
+    return [0,1,2].map((md) => {
+      const out = [];
+      Object.keys(GROUPS).forEach((L) => {
+        fixturesFor(L).filter((f) => f.md === md).forEach((f) => {
+          const s = gs[f.id];
+          const played = s && s.h !== "" && s.a !== "" && s.h != null && s.a != null;
+          out.push({ ...f, L, score: played ? s : null, played });
+        });
+      });
+      return out;
+    });
+  }, [gs]);
+
+  const cur = matchesByDay[day] || [];
+  const played = cur.filter((m) => m.played).length;
+  const total = cur.length;
+
+  return (
+    <div className="wc-wrap wc-fade">
+      <h2 className="wc-h2 wc-disp" style={{ marginTop:0 }}>{t("res_title")}</h2>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+        <div className="wc-chips" style={{ flex:1 }}>
+          {[0,1,2].map((d) => (
+            <button key={d} className={"wc-chip"+(day===d?" on":"")} onClick={() => setDay(d)}>{t("res_day")} {d+1}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ fontSize:11, color:"var(--mut)", marginBottom:10 }}>{played}/{total} matchs joués</div>
+      {cur.length === 0 && <div className="wc-card" style={{ textAlign:"center", color:"var(--mut)", padding:20 }}>{t("res_empty")}</div>}
+      {Object.keys(GROUPS).map((L) => {
+        const gMatches = cur.filter((m) => m.L === L);
+        if (!gMatches.length) return null;
+        return (
+          <div className="wc-card" key={L} style={{ padding:"6px 16px 10px" }}>
+            <div className="wc-h2 wc-disp" style={{ margin:"8px 0 4px", display:"flex", alignItems:"center", gap:8 }}>
+              <span className="wc-badge wc-disp" style={{ width:26, height:26, fontSize:13 }}>{L}</span>
+              <span>Groupe {L}</span>
+              <button className="wc-ob" onClick={() => simGroup(L)} style={{ fontSize:10, minWidth:0, padding:"5px 9px", marginLeft:"auto" }}>Sim</button>
+            </div>
+            {gMatches.map((m, i) => {
+              const hw = m.score && +m.score.h > +m.score.a;
+              const aw = m.score && +m.score.a > +m.score.h;
+              return (
+                <div className="wc-res-match" key={m.id} style={i===0?{borderTop:"none"}:{}}>
+                  <div className={"side r"+(hw?" ":" ")} style={hw?{fontWeight:700}:{}}><span style={{fontSize:16}}>{flag(m.h.c)}</span><span>{m.h.n}</span></div>
+                  <div style={{ textAlign:"center", minWidth:70 }}>
+                    <div className={"wc-res-status "+(m.played?"status-ft":"status-ns")}>{m.played ? t("res_finished") : t("res_upcoming")}</div>
+                    <div className="wc-res-score">{m.played ? `${m.score.h} – ${m.score.a}` : "– : –"}</div>
+                  </div>
+                  <div className={"side"+(aw?" ":" ")} style={aw?{fontWeight:700}:{}}><span>{m.a.n}</span><span style={{fontSize:16}}>{flag(m.a.c)}</span></div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /* =========================================================================
    APP
@@ -378,8 +512,23 @@ export default function App() {
   const [gs, setGs] = useState({});   // group scores
   const [ko, setKo] = useState(null); // knockout result
   const [loaded, setLoaded] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstall, setShowInstall] = useState(false);
   const dir = lang === "ar" ? "rtl" : "ltr";
   const t = (k) => (DICT[lang] && DICT[lang][k]) ?? DICT.fr[k] ?? k;
+
+  /* PWA install prompt */
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+  const handleInstall = useCallback(async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null); setShowInstall(false);
+  }, [deferredPrompt]);
 
   /* load */
   useEffect(() => { (async () => {
@@ -409,7 +558,7 @@ export default function App() {
   const share = async () => { const data = { title: t("app"), text: t("shareTxt"), url: typeof location !== "undefined" ? location.href : "" };
     try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(data.url); alert(t("copied")); } } catch (e) {} };
 
-  const navItems = [["apercu","nav_a",ICONS.home],["groupes","nav_g",ICONS.groups],["bracket","nav_b",ICONS.bracket],["paris","nav_p",ICONS.bet],["plus","nav_m",ICONS.more]];
+  const navItems = [["apercu","nav_a",ICONS.home],["resultats","nav_r",ICONS.results],["groupes","nav_g",ICONS.groups],["bracket","nav_b",ICONS.bracket],["paris","nav_p",ICONS.bet]];
   const isMore = tab === "plus" || tab === "stades" || tab === "arbitres";
 
   return (
@@ -435,6 +584,14 @@ export default function App() {
       {/* ===== APERÇU ===== */}
       {tab === "apercu" && (
         <div className="wc-wrap wc-fade">
+          {showInstall && (
+            <div className="wc-install" onClick={handleInstall}>
+              <span className="ic">📲</span>
+              <div className="tx"><b>{t("install")}</b><span>{t("install_sub")}</span></div>
+              <span className="arr">›</span>
+            </div>
+          )}
+          <Countdown t={t} />
           <button className="wc-cta" onClick={simAll}>{t("simAll")}</button>
 
           {ko && (
@@ -489,6 +646,11 @@ export default function App() {
 
           <p className="wc-note">{t("betNote")}</p>
         </div>
+      )}
+
+      {/* ===== RÉSULTATS ===== */}
+      {tab === "resultats" && (
+        <Results t={t} lang={lang} gs={gs} setGs={setGs} simGroup={simGroup} />
       )}
 
       {/* ===== GROUPES ===== */}

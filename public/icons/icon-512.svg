@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 192 192'>
+  <rect width='512' height='512' rx='80' fill='#070A1A'/>
+  <defs>
+    <linearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#FF2E7E'/>
+      <stop offset='50%' stop-color='#7B5CFF'/>
+      <stop offset='100%' stop-color='#2BE2C9'/>
+    </linearGradient>
+  </defs>
+  <text x='96' y='118' text-anchor='middle' font-size='90' font-family='serif'>⚽</text>
+  <rect x='0' y='152' width='512' height='40' rx='0' fill='url(#g1)'/>
+  <text x='96' y='184' text-anchor='middle' font-size='20' font-weight='bold' font-family='Arial,sans-serif' fill='white' letter-spacing='2'>2026</text>
+</svg>
